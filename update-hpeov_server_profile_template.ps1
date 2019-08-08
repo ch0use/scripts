@@ -102,12 +102,12 @@ function Main {
     set-vmhost -vmhost $vmhost -State Maintenance -Evacuate:$true -Confirm:$false
     
     # Schedule downtime for host
-	# Based on https://github.com/schindlerd/opsview-add-host/blob/master/opsview-add-host.ps1
+    # Based on https://github.com/schindlerd/opsview-add-host/blob/master/opsview-add-host.ps1
     $OpsviewHostObj = "MH-" + $ESXiHost.Split('.')[0]
     Write-Verbose -Message "$(Get-Date -Format G) Scheduling downtime in Opsview for host $OpsviewHostObj"
 
     $urlauth = $OpsviewURL + "/rest/login"
-	$urldowntime = $OpsviewURL + "/rest/downtime?hst.hostname=" + $OpsviewHostPrefix + "-" + $ESXiHost.Split('.')[0]
+    $urldowntime = $OpsviewURL + "/rest/downtime?hst.hostname=" + $OpsviewHostPrefix + "-" + $ESXiHost.Split('.')[0]
     $creds = '{"username":"' + $OpsviewUsername + '","password":"' + $OpsviewPassword + '"}'
     $bytes1 = [System.Text.Encoding]::ASCII.GetBytes($creds)
     $web1 = [System.Net.WebRequest]::Create($urlauth)
