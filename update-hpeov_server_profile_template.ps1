@@ -62,7 +62,7 @@ Set-PowerCLIConfiguration -DefaultVIServerMode Multiple -Scope Session -Confirm:
 
 # User-configurable variables
 $OpsviewURL="https://opsview.local"
-$OpsviewHostPrefix="MH"
+$OpsviewHostPrefix="MH-"
 $OpsviewUsername="automation"
 $OpsviewPassword="password"
 
@@ -103,7 +103,7 @@ function Main {
     
     # Schedule downtime for host
     # Based on https://github.com/schindlerd/opsview-add-host/blob/master/opsview-add-host.ps1
-    $OpsviewHostObj = "MH-" + $ESXiHost.Split('.')[0]
+    $OpsviewHostObj = $OpsviewHostPrefix + $ESXiHost.Split('.')[0]
     Write-Verbose -Message "$(Get-Date -Format G) Scheduling downtime in Opsview for host $OpsviewHostObj"
 
     $urlauth = $OpsviewURL + "/rest/login"
@@ -178,6 +178,8 @@ function Main {
 
           $vmhost = get-vmhost $ESXiHost
 
+          $hostReady = $false
+          
           if ($vmhost.ConnectionState -eq "Maintenance") {
             $hostReady = $true
           }
