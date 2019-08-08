@@ -3,7 +3,7 @@
   Updates an HPE OneView Server Profile for a OneView-managed server running VMware ESXi to be in compliance with the Server Profile Template. Generally this is used to install a new firmware baseline but can be used for any reason to bring a server profile in to compliance with its template.
 
   .DESCRIPTION
-  Checks if the server profile template is non-compliant. If so, put the host in Maintenance Mode in VMware, then schedule downtime in Opsview and shutdown the host. When the host is powered off, update the server profile to be in compliance with its server profile template. Once compliant, boot the host. When it has reconnected to vCenter, exit maintenance mode and delete the downtime in Opsview
+  Checks if the server profile template is non-compliant. If so, put the host in Maintenance Mode in VMware, then schedule downtime in Opsview and shutdown the host. When the host is powered off, update the server profile to be in compliance with its server profile template. Once compliant, boot the host. When it has reconnected to vCenter, exit maintenance mode and delete the downtime in Opsview.
 
   .PARAMETER vCenterServer
   vCenter Server address or hostname
@@ -21,20 +21,20 @@
   Name of ESXi host as displayed within vCenter
   
   .EXAMPLE
-  .\update-firmware.ps1 -vCenterServer vcenter.local -vCenterUser "administrator@vsphere.local" -vCenterPassword "password" -HPEOVHostname hpeov.local -HPEOVUser administrator -HPEOVPassword password -ESXiHost esxi01.local
+  .\update-hpeov_server_profile_template.ps1 -vCenterServer vcenter.local -vCenterUser "administrator@vsphere.local" -vCenterPassword "password" -HPEOVHostname hpeov.local -HPEOVUser administrator -HPEOVPassword password -ESXiHost esxi01.local
 
   Use -verbose flag for more detailed output during script execution.
   
   .NOTES
-  This script requires a reasonably modern version of the PowerCLI module to be installed from Powershell Gallery, as well as HPOneView:
+  This script requires a reasonably modern version of the PowerCLI module to be installed from Powershell Gallery as well as HPOneView:
   install-module HPOneView.420 -allowClobber
 
-  Expects the name of the ESXi host in vCenter is the entire host FQDN (Example: esxi01.local)
-  Assumes the server profile name in OneView is the hostname (not FQDN) of the ESXi host. (Example: esxi01)
-  Configure the following variables within the script:
+  Expects the name of the ESXi host as displayed in vCenter to be the entire host FQDN (Example: esxi01.local)
+  Assumes the server profile name in OneView is the ESXi hostname (not FQDN) (Example: esxi01)
+  Configure the following User-configurable variables within the script:
   - $OpsviewURL : URL of Opsview. Example: https://opsview.local
   - $OpsviewHostPrefix : Prefix for host objects in Opsview, if any
-  - $OpsviewUsername : Username for Opsview user
+  - $OpsviewUsername : Username for Opsview user with permission to set downtime on the host object
   - $OpsviewPassword : Password for Opsview user
 #>
 
