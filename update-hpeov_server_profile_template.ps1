@@ -123,7 +123,7 @@ function Main {
     $reader1.Close()
     $token1=$token1.Replace("{`"token`":`"", "")
     $token1=$token1.Replace("`"}", "")
-    $downtimeData='{"comment":"firmware","endtime":"+1d","starttime":"now"}'
+    $downtimeData='{"comment":"server profile compliance","endtime":"+1d","starttime":"now"}'
     $bytes2 = [System.Text.Encoding]::ASCII.GetBytes($downtimeData)
     $web2 = [System.Net.WebRequest]::Create($urldowntime)
     $web2.Method = "POST"
@@ -160,17 +160,16 @@ function Main {
         }
       }
 
-      # Update firmware, wait for completion
+      # Update server profile, wait for completion
       if ($serverReady) {
       
-        Write-Host "$(Get-Date -Format G) Updating server profile to be compliant with template"
+        Write-Host "$(Get-Date -Format G) Updating server profile to be compliant with template. If a new firmware baseline was selected, this could take over 30 minutes."
         $serverProfile | Update-HPOVServerProfile -confirm:$false -Async | Wait-HPOVTaskComplete -Timeout (New-TimeSpan -Minutes 35)
-        #Start-Sleep -Seconds 2100
 
         $serverProfile = Get-HPOVServerProfile -Name $ESXiHost.Split('.')[0]
         if ($serverProfile.templateCompliance -eq "Compliant") {
           # Power on host, exit maintenance mode
-          Write-Host "$(Get-Date -Format G) Completed, powering-on host."
+          Write-Host "$(Get-Date -Format G) Server profile is now compliant, powering-on host $ESXiHost"
           $serverProfile | Start-HPOVServer
 
           Write-Verbose -Message "$(Get-Date -Format G) Waiting 300 secs for host to boot"
@@ -191,7 +190,7 @@ function Main {
               $hostReady = $true
             }
             else {
-              Write-Error -Category ResourceUnavailable -Message "Host has not re-connected to vCenter. Exiting."
+              Write-Error -Category ResourceUnavailable -Message "Host has not re-connected to vCenter. Investigate. Exiting."
             }
           }
 
@@ -199,7 +198,7 @@ function Main {
             Write-Host "$(Get-Date -Format G) Exiting maintenance mode"
             set-vmhost -vmhost $vmhost -State Connected
 
-            # Delete downtime
+            # Delete downtime (technically, this deletes *all* downtime present for the host - current & future)
             Write-Verbose -Message "$(Get-Date -Format G) Removing Opsview Downtime"
             $web2 = [System.Net.WebRequest]::Create($urldowntime)
             $web2.Method = "DELETE"
@@ -237,7 +236,7 @@ function Main {
 }
 
 
-# Clear any lingering connections
+# Clear any lingering connections from previous runs or manual authentications
 try {
   Disconnect-VIServer * -force -confirm:$false -ErrorAction Continue
 }
