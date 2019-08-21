@@ -21,7 +21,7 @@
   Name of ESXi host as displayed within vCenter
   
   .EXAMPLE
-  .\update-hpeov_server_profile_template.ps1 -vCenterServer vcenter.local -vCenterUser "administrator@vsphere.local" -vCenterPassword "password" -HPEOVHostname hpeov.local -HPEOVUser administrator -HPEOVPassword password -ESXiHost esxi01.local
+  .\update-hpeov_server_profile_from_template.ps1 -vCenterServer vcenter.local -vCenterUser "administrator@vsphere.local" -vCenterPassword "password" -HPEOVHostname hpeov.local -HPEOVUser administrator -HPEOVPassword password -ESXiHost esxi01.local
 
   Use -verbose flag for more detailed output during script execution.
   
