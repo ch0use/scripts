@@ -158,12 +158,12 @@ function ScaleUp {
         $vmResult = $_ | Start-AzVM -NoWait
       } catch { LogOutput -LogType "WARN" -LogMessage "VM $($_.Name) was not able to start! $($_.Exception.Message)" }
     
-      # Update the dr_on_demand tags for the VM
+      # Update the dr tags for the VM
       $updateTagResult = Update-AzTag -ResourceId $_.Id -tag @{"dr-last_cycle"="$DateCycled";"dr-vmstate"="dr";} -Operation Merge
     }
   }
 
-  # Update the dr_on_demand tags for the availability set
+  # Update the dr tags for the availability set
   if (! $DryRun) { $updateTagResult = Update-AzTag -ResourceId $AvailabilitySet.Id -tag @{"dr-last_cycle"="$DateCycled"; "dr-notify_timestamp"="$DateCycled"; "dr-state"="dr";} -Operation Merge }
 }
 
@@ -201,7 +201,7 @@ function ScaleDown {
       if (! $DryRun) {
         $vmResult = $VM | Stop-AzVM -NoWait -Force
 
-        # Update the dr_on_demand tags for the VM - set the last_cycle to when it was shut down and the vmstate to ready indicating it is available for CycleVMs rotations.
+        # Update the dr tags for the VM - set the last_cycle to when it was shut down and the vmstate to ready indicating it is available for CycleVMs rotations.
         $updateTagResult = Update-AzTag -ResourceId $VM.Id -tag @{"dr-last_cycle"="$(Get-Date -Format o)";"dr-vmstate"="ready"} -Operation Merge
       }
 
@@ -222,7 +222,7 @@ function ScaleDown {
     if (! $DryRun) { $updateTagResult = Update-AzTag -ResourceId $_.Id -tag @{"dr-vmstate"="standby"} -Operation Merge }
   }
 
-  # Update the dr_on_demand tags for the availability set
+  # Update the dr tags for the availability set
   if (! $DryRun) { $updateTagResult = Update-AzTag -ResourceId $AvailabilitySet.Id -tag @{"dr-last_cycle"="$(Get-Date -Format o)"; "dr-state"="standby";} -Operation Merge }
 }
 
