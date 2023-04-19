@@ -18,6 +18,7 @@
   .\run_dr.ps1 -Action <ScaleUp|ScaleDown|CycleVMs> -AvailabilitySet <optional: Availability set name> -DryRun (optional, defaults to true. Use -DryRun $false to perform any changes)
   .NOTES
   An automation account should be created in each subscription to run this script and affect availability sets in that subscription.
+    - Supports using a RunAs account (default, deprecated) or ManagedIdentity. Will try RunAs first, unless $UseAzureAutomationRunAs = $false.
 
   The following Modules need to be imported in to the Azure Automation account: 
     - Az.Accounts
@@ -60,6 +61,7 @@ $ErrorActionPreference = "Continue"
 $VerbosePreference = "Continue"
 
 # Set preferences
+$UseAzureAutomationRunAs = $true # Change this to $false if using a ManagedIdentity
 $LogonAttempts = 10
 $VMStopWaitSecs = 120 # seconds to wait before querying a newly-stopped VM for its status
 $EmailDebugLogs = $false
@@ -542,32 +544,61 @@ function getAzAvailSets {
 
 # Confirm connection to Azure
 $useAzureAutomation = $true
-# Get-AutomationConnection is only available within an Azure Automation container
-try { $connection = Get-AutomationConnection -Name AzureRunAsConnection } catch { 
-  Write-Verbose "$(Get-Date -Format G) Could not load Get-AutomationConnection, assuming local run: $($_.Exception.Message)" 
-  $useAzureAutomation = $false
+
+# Try using a RunAs account first
+if ($UseAzureAutomationRunAs) {
+  try { 
+    Write-Verbose "$(Get-Date -Format G) Connecting to Azure using RunAs account ..." 
+    $connection = Get-AutomationConnection -Name AzureRunAsConnection -ErrorAction Stop
+      
+    } catch { 
+      Write-Verbose "$(Get-Date -Format G) Could not load Get-AutomationConnection, RunAs account may not be available: $($_.Exception.Message)" 
+      $UseAzureAutomationRunAs = $false
+  }
+
+  if ($UseAzureAutomationRunAs) {
+    $TenantID = $connection.TenantID
+    $ApplicationId = $connection.ApplicationId
+    $CertificateThumbprint = $connection.CertificateThumbprint
+
+    Write-Verbose "$(Get-Date -Format G) Get-AutomationConnection returned TenantID $TenantID ApplicationId $ApplicationID CertificateThumbprint $CertificateThumbprint" 
+
+    $logonAttempt = 0
+    while(!($connectionResult) -and ($logonAttempt -le $LogonAttempts)) {
+      $LogonAttempt++
+      try {
+        Write-Verbose "$(Get-Date -Format G) Connecting to Azure TenantID $TenantID as RunAs ServicePrincipal ApplicationId $ApplicationID with CertificateThumbprint $CertificateThumbprint, attempt $logonAttempt"
+        $connectionResult = Connect-AzAccount -ServicePrincipal -Tenant $TenantID -ApplicationId $ApplicationID -CertificateThumbprint $CertificateThumbprint -ErrorAction Stop
+        Write-Verbose "$(Get-Date -Format G) Connected to Azure on attempt $logonAttempt"
+      } catch {
+        Write-Warning "$(Get-Date -Format G) Unable to connect to Azure, attempt $logonAttempt, sleeping 30 secs: $($_.Exception.Message)"
+        Start-Sleep -Seconds 30
+      }
+    }
+  }
 }
 
-if ($useAzureAutomation) {
-  $TenantID = $connection.TenantID
-  $ApplicationId = $connection.ApplicationId
-  $CertificateThumbprint = $connection.CertificateThumbprint
-
-  Write-Verbose "$(Get-Date -Format G) Get-AutomationConnection returned TenantID $TenantID ApplicationId $ApplicationID CertificateThumbprint $CertificateThumbprint" 
+if (! $UseAzureAutomationRunAs) {
+  Write-Verbose "$(Get-Date -Format G) Connecting to Azure using ManagedIdentity ..."
 
   $logonAttempt = 0
   while(!($connectionResult) -and ($logonAttempt -le $LogonAttempts)) {
     $LogonAttempt++
     try {
-      Write-Verbose "$(Get-Date -Format G) Connecting to Azure TenantID $TenantID as ServicePrincipal ApplicationId $ApplicationID with CertificateThumbprint $CertificateThumbprint, attempt $logonAttempt"
-      $connectionResult = Connect-AzAccount -ServicePrincipal -Tenant $TenantID -ApplicationId $ApplicationID -CertificateThumbprint $CertificateThumbprint
+      
+      $connectionResult = Connect-AzAccount -Identity -ErrorAction Stop
       Write-Verbose "$(Get-Date -Format G) Connected to Azure on attempt $logonAttempt"
+      $useAzureAutomation = $true
     } catch {
       Write-Warning "$(Get-Date -Format G) Unable to connect to Azure, attempt $logonAttempt, sleeping 30 secs: $($_.Exception.Message)"
       Start-Sleep -Seconds 30
+      $useAzureAutomation = $false
     }
   }
+}
 
+
+if ($useAzureAutomation) {
   # Retrieve Automation assets from Azure Automation.
   try {
     Write-Verbose "$(Get-Date -Format G) Retrieving Automation assets"
